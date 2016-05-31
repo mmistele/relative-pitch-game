@@ -13,7 +13,7 @@ public class MicrophoneCapture : MonoBehaviour {
 	private bool recordingStarted = false;
 	private bool userWantsRecording = false;
 	private int previousPosition = 0;
-	private float lastPitch;
+	public float lastPitch;
 
 	// The max and min frequencies for recording
 	private int minFreq;
@@ -60,6 +60,8 @@ public class MicrophoneCapture : MonoBehaviour {
 
 		pitchTracker = new PitchTracker ();
 		pitchTracker.SampleRate = maxFreq;	
+		pitchTracker.RecordPitchRecords = true;
+		pitchTracker.PitchRecordHistorySize = 20;
 
 		// yield break;
 		pitchTracker.PitchDetected += new PitchTracker.PitchDetectedHandler (PitchDetected);
@@ -113,7 +115,6 @@ public class MicrophoneCapture : MonoBehaviour {
 				// Fill a new buffer with this data, omitting the trailing 0s
 				bufferLength = currentPosition - previousPosition;
 
-				Debug.Log(bufferLength);
 				float[] pitchTrackedBuffer = new float[bufferLength];
 				System.Array.Copy(samples, 0, pitchTrackedBuffer, 0, bufferLength);
 
@@ -126,6 +127,23 @@ public class MicrophoneCapture : MonoBehaviour {
 	}
 
 	void PitchDetected(PitchTracker sender, PitchTracker.PitchRecord pitchRecord) {
-		lastPitch = pitchRecord.Pitch;
+		//lastPitch = pitchRecord.Pitch;
+
+		// Average over past?
+		IList latestPitches = sender.PitchRecords;
+		int nonzeroPitches = 0;
+		float nonzeroPitchSum = 0.0F;
+		for (int i = 0; i < latestPitches.Count; i++) {
+			PitchTracker.PitchRecord record = (PitchTracker.PitchRecord)latestPitches[i];
+			if (record.Pitch != 0) {
+				nonzeroPitches++;
+				nonzeroPitchSum += record.Pitch;
+			}
+		}
+		if (nonzeroPitches == 0) {
+			lastPitch = 0;
+		} else {
+			lastPitch = nonzeroPitchSum / nonzeroPitches;
+		}
 	}
 }
